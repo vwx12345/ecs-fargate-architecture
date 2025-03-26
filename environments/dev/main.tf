@@ -1,3 +1,21 @@
+module "acm_global" {
+  source            = "../../modules/acm_global"
+  domain_name       = "dev-elton.com" # 루트 도메인
+  alternative_names = ["*.dev-elton.com"] # 서브도메인 전체 포함
+  zone_id           = data.aws_route53_zone.primary.zone_id
+  providers = {
+    aws = aws.us_east_1
+  }
+}
+
+module "acm_regional" {
+  source            = "../../modules/acm_regional"
+  domain_name       = "dev-elton.com"
+  alternative_names = ["*.dev-elton.com"]
+  zone_id           = data.aws_route53_zone.primary.zone_id
+}
+
+
 module "vpc" {
   source                = "../../modules/vpc"
   cidr_block            = var.cidr_block
@@ -56,8 +74,8 @@ module "alb" {
   name       = "myapp-alb"
   vpc_id     = module.vpc.vpc_id
   subnet_ids = [
-    module.vpc.public_subnet_ids["pub-A"],
-    module.vpc.public_subnet_ids["pub-C"]
+    module.vpc.public_subnet_ids["app-A"],
+    module.vpc.public_subnet_ids["app-C"]
   ]
   sg_id = module.sg.alb_sg_id
 }
@@ -145,8 +163,8 @@ module "api_gateway" {
     "ANY /{proxy+}"
   ]
   subnet_ids        = [
-    module.vpc.private_subnet_ids["db-A"],
-    module.vpc.private_subnet_ids["db-C"]
+    module.vpc.private_subnet_ids["app-A"],
+    module.vpc.private_subnet_ids["app-C"]
   ]
   security_group_ids = [module.sg.vpc_link_sg_id]
 }
