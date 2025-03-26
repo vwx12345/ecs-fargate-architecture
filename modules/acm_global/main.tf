@@ -1,12 +1,22 @@
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+    }
+  }
+}
+
 provider "aws" {
   alias  = "virginia"
   region = "us-east-1"
 }
 
 resource "aws_acm_certificate" "this" {
-  provider          = aws.virginia
-  domain_name       = var.domain_name
-  validation_method = "DNS"
+  provider                  = aws.virginia
+  domain_name              = var.domain_name
+  validation_method        = "DNS"
+  subject_alternative_names = var.alternative_names
+
   lifecycle {
     create_before_destroy = true
   }
@@ -24,8 +34,8 @@ resource "aws_route53_record" "cert_validation" {
   zone_id = var.zone_id
   name    = each.value.name
   type    = each.value.type
+  ttl     = 300
   records = [each.value.record]
-  ttl     = 60
 }
 
 resource "aws_acm_certificate_validation" "this" {

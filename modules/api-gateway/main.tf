@@ -9,25 +9,27 @@ resource "aws_apigatewayv2_stage" "this" {
   auto_deploy = true
 }
 
-# 공통 Integration 정의 (하나의 ALB에 여러 route 연결 가능)
+# VPC Link 생성 (프라이빗 ALB 접근용)
+resource "aws_apigatewayv2_vpc_link" "this" {
+  name               = "${var.name}-vpc-link"
+  subnet_ids         = var.subnet_ids
+  security_group_ids = var.security_group_ids
+}
+
+# ALB 연결 Integration (VPC Link 사용)
 resource "aws_apigatewayv2_integration" "alb" {
   api_id                 = aws_apigatewayv2_api.this.id
   integration_type       = "HTTP_PROXY"
   integration_method     = "ANY"
-  integration_uri        = var.alb_listener_arn
+  integration_uri        = var.alb_listener_uri
   payload_format_version = "1.0"
-  connection_type        = "INTERNET"
+  connection_type        = "VPC_LINK"
+  connection_id          = aws_apigatewayv2_vpc_link.this.id
 }
 
-# 여러 경로를 위한 route 리소스 정의
+# 라우트 여러 개 정의
 resource "aws_apigatewayv2_route" "routes" {
-  for_each = toset([
-    "GET /api/users/{userId}",
-    "GET /api/users/health_check",
-    "POST /api/products",
-    "GET /api/{proxy}/health_check",
-    "ANY /{proxy+}"
-  ])
+  for_each = toset(var.route_keys)
 
   api_id    = aws_apigatewayv2_api.this.id
   route_key = each.value
