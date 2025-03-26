@@ -35,3 +35,19 @@ resource "aws_apigatewayv2_route" "routes" {
   route_key = each.value
   target    = "integrations/${aws_apigatewayv2_integration.alb.id}"
 }
+
+resource "aws_apigatewayv2_domain_name" "this" {
+  domain_name = var.custom_domain_name
+
+  domain_name_configuration {
+    certificate_arn = var.certificate_arn
+    endpoint_type   = "REGIONAL"  # 또는 "EDGE" (HTTP API는 REGIONAL 권장)
+    security_policy = "TLS_1_2"
+  }
+}
+
+resource "aws_apigatewayv2_api_mapping" "this" {
+  api_id      = aws_apigatewayv2_api.this.id
+  domain_name = aws_apigatewayv2_domain_name.this.id
+  stage       = aws_apigatewayv2_stage.this.name
+}

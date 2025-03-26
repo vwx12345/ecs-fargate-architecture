@@ -28,3 +28,13 @@ variable "security_group_ids" {
   description = "VPC Link용 보안 그룹 ID 목록"
   type        = list(string)
 }
+
+variable "custom_domain_name" {
+  description = "예: api.dev-elton.com"
+  type        = string
+}
+
+variable "certificate_arn" {
+  description = "ACM 인증서 ARN (REGIONAL)"
+  type        = string
+}

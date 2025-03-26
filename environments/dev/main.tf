@@ -1,20 +1,34 @@
-module "acm_global" {
-  source            = "../../modules/acm_global"
-  domain_name       = "dev-elton.com" # 루트 도메인
-  alternative_names = ["*.dev-elton.com"] # 서브도메인 전체 포함
-  zone_id           = data.aws_route53_zone.primary.zone_id
-  providers = {
-    aws = aws.us_east_1
-  }
+resource "aws_route53_zone" "primary" {
+  name = var.root_domain
+}
+
+module "route53" {
+  source = "../../modules/route53"
+
+  root_domain         = var.root_domain
+  www_domain          = var.www_domain
+  api_subdomain       = var.api_subdomain
+  cloudfront_domain   = module.cloudfront.domain_name
+  api_gateway_domain  = module.api_gateway.custom_domain_name     # ✅ 이것도 output으로 받아야 해요
+  zone_id             = aws_route53_zone.primary.zone_id
 }
 
 module "acm_regional" {
   source            = "../../modules/acm_regional"
-  domain_name       = "dev-elton.com"
-  alternative_names = ["*.dev-elton.com"]
-  zone_id           = data.aws_route53_zone.primary.zone_id
+  domain_name       = var.root_domain
+  alternative_names = [var.api_subdomain]
+  zone_id           = aws_route53_zone.primary.zone_id
 }
 
+module "acm_global" {
+  source            = "../../modules/acm_global"
+  domain_name       = var.root_domain
+  alternative_names = ["*.dev-elton.com"]
+  zone_id           = aws_route53_zone.primary.zone_id
+  providers = {
+    aws = aws.us_east_1
+  }
+}
 
 module "vpc" {
   source                = "../../modules/vpc"
@@ -38,7 +52,7 @@ module "nat_gateway" {
 module "sg" {
   source      = "../../modules/security-group"
   vpc_id      = module.vpc.vpc_id
-  name_prefix = "myapp"
+  name_prefix = var.name
 }
 
 module "route_table" {
@@ -71,11 +85,11 @@ module "vpc_endpoint" {
 
 module "alb" {
   source     = "../../modules/alb"
-  name       = "myapp-alb"
+  name       = "${var.name}-ALB"
   vpc_id     = module.vpc.vpc_id
   subnet_ids = [
-    module.vpc.public_subnet_ids["app-A"],
-    module.vpc.public_subnet_ids["app-C"]
+    module.vpc.private_subnet_ids["app-A"],
+    module.vpc.private_subnet_ids["app-C"]
   ]
   sg_id = module.sg.alb_sg_id
 }
@@ -126,7 +140,7 @@ module "listener_rules" {
 
 module "rds" {
   source            = "../../modules/rds"
-  name              = "myapp-db"
+  name              = "${lower(var.name)}-subnet-group"
   engine            = "postgres"
   instance_class    = "db.t3.micro"
   allocated_storage = 20
@@ -147,24 +161,27 @@ module "cloudfront" {
 
 module "s3" {
   source         = "../../modules/s3"
-  bucket_name    = "elton-static-site-bucket"
+  bucket_name    = "${var.name}-bucket"
   cloudfront_arn = module.cloudfront.cloudfront_arn
 }
 
 module "api_gateway" {
   source             = "../../modules/api-gateway"
-  name               = var.name
+  name               = "${var.name}-api-gateway"
+  stage_name         = "$default"
   alb_listener_uri   = module.alb.listener_arn
-  route_keys          = [
+  route_keys         = [
     "GET /api/users/{userId}",
     "GET /api/users/health_check",
     "POST /api/products",
     "GET /api/{proxy}/health_check",
     "ANY /{proxy+}"
   ]
-  subnet_ids        = [
+  subnet_ids          = [
     module.vpc.private_subnet_ids["app-A"],
     module.vpc.private_subnet_ids["app-C"]
   ]
-  security_group_ids = [module.sg.vpc_link_sg_id]
+  security_group_ids  = [module.sg.vpc_link_sg_id]
+  custom_domain_name  = var.api_subdomain              
+  certificate_arn     = module.acm_regional.cert_arn
 }

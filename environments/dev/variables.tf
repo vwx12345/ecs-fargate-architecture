@@ -72,3 +72,28 @@ variable "s3_bucket" {
   description = "S3 bucket name"
   type        = string
 }
+
+variable "root_domain" {
+  description = "루트 도메인 (예: dev-elton.com)"
+  type        = string
+}
+
+variable "www_domain" {
+  description = "www 서브도메인 (예: www.dev-elton.com)"
+  type        = string
+}
+
+variable "api_subdomain" {
+  description = "API 서브도메인 (예: api.dev-elton.com)"
+  type        = string
+}
+
+variable "zone_id" {
+  description = "Route 53 호스팅 존 ID"
+  type        = string
+}
+
+variable "api_gateway_domain" {
+  description = "API Gateway 도메인 이름"
+  type        = string
+}
