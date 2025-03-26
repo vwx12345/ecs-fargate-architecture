@@ -106,7 +106,6 @@ module "listener_rules" {
   }
 }
 
-
 module "rds" {
   source            = "../../modules/rds"
   name              = "myapp-db"
