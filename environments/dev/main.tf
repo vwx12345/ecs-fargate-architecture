@@ -132,3 +132,21 @@ module "s3" {
   bucket_name    = "elton-static-site-bucket"
   cloudfront_arn = module.cloudfront.cloudfront_arn
 }
+
+module "api_gateway" {
+  source             = "../../modules/api-gateway"
+  name               = var.name
+  alb_listener_uri   = module.alb.listener_arn
+  route_keys          = [
+    "GET /api/users/{userId}",
+    "GET /api/users/health_check",
+    "POST /api/products",
+    "GET /api/{proxy}/health_check",
+    "ANY /{proxy+}"
+  ]
+  subnet_ids        = [
+    module.vpc.private_subnet_ids["db-A"],
+    module.vpc.private_subnet_ids["db-C"]
+  ]
+  security_group_ids = [module.sg.vpc_link_sg_id]
+}
