@@ -7,8 +7,6 @@ root_domain         = "dev-elton.com"
 www_domain          = "www.dev-elton.com"
 api_subdomain       = "api.dev-elton.com"
 
-
-
 public_subnet_config = {
   pub-A = { cidr = "10.0.1.0/24", az = "ap-northeast-2a" }
   pub-C = { cidr = "10.0.2.0/24", az = "ap-northeast-2c" }

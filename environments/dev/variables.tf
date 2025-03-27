@@ -48,30 +48,6 @@ variable "container_images" {
   type        = map(string)
 }
 
-variable "db_url" {
-  description = "The database connection URL"
-  type        = string
-}
-
-variable "cloudfront_domain" {
-  description = "CloudFront domain name"
-  type        = string
-}
-
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-}
-
-variable "task_role_arn" {
-  description = "IAM task role ARN"
-  type        = string
-}
-
-variable "s3_bucket" {
-  description = "S3 bucket name"
-  type        = string
-}
 
 variable "root_domain" {
   description = "루트 도메인 (예: dev-elton.com)"
@@ -85,15 +61,5 @@ variable "www_domain" {
 
 variable "api_subdomain" {
   description = "API 서브도메인 (예: api.dev-elton.com)"
-  type        = string
-}
-
-variable "zone_id" {
-  description = "Route 53 호스팅 존 ID"
-  type        = string
-}
-
-variable "api_gateway_domain" {
-  description = "API Gateway 도메인 이름"
   type        = string
 }

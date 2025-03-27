@@ -7,23 +7,21 @@ module "route53" {
 
   root_domain         = var.root_domain
   www_domain          = var.www_domain
-  api_subdomain       = var.api_subdomain
   cloudfront_domain   = module.cloudfront.domain_name
-  api_gateway_domain  = module.api_gateway.custom_domain_name     # ✅ 이것도 output으로 받아야 해요
   zone_id             = aws_route53_zone.primary.zone_id
 }
 
 module "acm_regional" {
   source            = "../../modules/acm_regional"
-  domain_name       = var.root_domain
-  alternative_names = [var.api_subdomain]
+  domain_name       = var.api_subdomain
+  alternative_names = []
   zone_id           = aws_route53_zone.primary.zone_id
 }
 
 module "acm_global" {
   source            = "../../modules/acm_global"
   domain_name       = var.root_domain
-  alternative_names = ["*.dev-elton.com"]
+  alternative_names =[var.root_domain, var.www_domain]
   zone_id           = aws_route53_zone.primary.zone_id
   providers = {
     aws = aws.us_east_1
@@ -154,10 +152,16 @@ module "rds" {
 }
 
 module "cloudfront" {
-  source        = "../../modules/cloudfront"
-  name          = "elton-static"
-  bucket_domain = module.s3.bucket_regional_domain_name
+  source              = "../../modules/cloudfront"
+  name                = "elton-static"
+  bucket_domain       = module.s3.bucket_regional_domain_name
+  zone_id             = aws_route53_zone.primary.zone_id
+  root_domain         = var.root_domain
+  acm_certificate_arn = module.acm_global.cert_arn
+  alternate_domains   = [var.root_domain, var.www_domain]
 }
+
+
 
 module "s3" {
   source         = "../../modules/s3"
@@ -182,6 +186,7 @@ module "api_gateway" {
     module.vpc.private_subnet_ids["app-C"]
   ]
   security_group_ids  = [module.sg.vpc_link_sg_id]
+  zone_id             = aws_route53_zone.primary.zone_id
   custom_domain_name  = var.api_subdomain              
   certificate_arn     = module.acm_regional.cert_arn
 }

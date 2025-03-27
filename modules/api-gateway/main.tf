@@ -36,6 +36,7 @@ resource "aws_apigatewayv2_route" "routes" {
   target    = "integrations/${aws_apigatewayv2_integration.alb.id}"
 }
 
+# 사용자 지정 도메인 이름 생성
 resource "aws_apigatewayv2_domain_name" "this" {
   domain_name = var.custom_domain_name
 
@@ -50,4 +51,17 @@ resource "aws_apigatewayv2_api_mapping" "this" {
   api_id      = aws_apigatewayv2_api.this.id
   domain_name = aws_apigatewayv2_domain_name.this.id
   stage       = aws_apigatewayv2_stage.this.name
+}
+
+#Route53에 생성 및 등록
+resource "aws_route53_record" "api" {
+  zone_id = var.zone_id
+  name    = var.custom_domain_name
+  type    = "A"
+
+  alias {
+    name                   = aws_apigatewayv2_domain_name.this.domain_name_configuration[0].target_domain_name
+    zone_id                = "Z2FDTNDATAQYW2"
+    evaluate_target_health = false
+  }
 }

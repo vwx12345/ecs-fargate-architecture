@@ -38,3 +38,8 @@ variable "certificate_arn" {
   description = "ACM 인증서 ARN (REGIONAL)"
   type        = string
 }
+
+variable "zone_id" {
+  description = "Route 53 hosted zone ID"
+  type        = string
+}
