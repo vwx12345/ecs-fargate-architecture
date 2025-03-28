@@ -5,6 +5,7 @@ resource "aws_lb_target_group" "this" {
   port     = each.value.port
   protocol = "HTTP"
   vpc_id   = var.vpc_id
+  target_type = "ip"  # ✅ Fargate는 ip여야 함!
 
   health_check {
     path                = each.value.health_check_path

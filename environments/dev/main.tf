@@ -1,32 +1,32 @@
-resource "aws_route53_zone" "primary" {
-  name = var.root_domain
-}
+# resource "aws_route53_zone" "primary" {
+#   name = var.root_domain
+# }
 
-module "route53" {
-  source = "../../modules/route53"
+# module "route53" {
+#   source = "../../modules/route53"
 
-  root_domain         = var.root_domain
-  www_domain          = var.www_domain
-  cloudfront_domain   = module.cloudfront.domain_name
-  zone_id             = aws_route53_zone.primary.zone_id
-}
+#   root_domain         = var.root_domain
+#   www_domain          = var.www_domain
+#   cloudfront_domain   = module.cloudfront.domain_name
+#   zone_id             = aws_route53_zone.primary.zone_id
+# }
 
-module "acm_regional" {
-  source            = "../../modules/acm_regional"
-  domain_name       = var.api_subdomain
-  alternative_names = []
-  zone_id           = aws_route53_zone.primary.zone_id
-}
+# module "acm_regional" {
+#   source            = "../../modules/acm_regional"
+#   domain_name       = var.api_subdomain
+#   alternative_names = []
+#   zone_id           = aws_route53_zone.primary.zone_id
+# }
 
-module "acm_global" {
-  source            = "../../modules/acm_global"
-  domain_name       = var.root_domain
-  alternative_names =[var.root_domain, var.www_domain]
-  zone_id           = aws_route53_zone.primary.zone_id
-  providers = {
-    aws = aws.us_east_1
-  }
-}
+# module "acm_global" {
+#   source            = "../../modules/acm_global"
+#   domain_name       = var.root_domain
+#   alternative_names =[var.root_domain, var.www_domain]
+#   zone_id           = aws_route53_zone.primary.zone_id
+#   providers = {
+#     aws = aws.us_east_1
+#   }
+# }
 
 module "vpc" {
   source                = "../../modules/vpc"
@@ -136,57 +136,75 @@ module "listener_rules" {
   }
 }
 
-module "rds" {
-  source            = "../../modules/rds"
-  name              = "${lower(var.name)}-subnet-group"
-  engine            = "postgres"
-  instance_class    = "db.t3.micro"
-  allocated_storage = 20
-  username          = var.db_username
-  password          = var.db_password
-  subnet_ids        = [
-    module.vpc.private_subnet_ids["db-A"],
-    module.vpc.private_subnet_ids["db-C"]
-  ]
-  sg_id = module.sg.rds_sg_id
-}
+# module "rds" {
+#   source            = "../../modules/rds"
+#   name              = "${lower(var.name)}-subnet-group"
+#   engine            = "postgres"
+#   instance_class    = "db.t3.micro"
+#   allocated_storage = 20
+#   username          = var.db_username
+#   password          = var.db_password
+#   subnet_ids        = [
+#     module.vpc.private_subnet_ids["db-A"],
+#     module.vpc.private_subnet_ids["db-C"]
+#   ]
+#   sg_id = module.sg.rds_sg_id
+# }
 
-module "cloudfront" {
-  source              = "../../modules/cloudfront"
-  name                = "elton-static"
-  bucket_domain       = module.s3.bucket_regional_domain_name
-  zone_id             = aws_route53_zone.primary.zone_id
-  root_domain         = var.root_domain
-  acm_certificate_arn = module.acm_global.cert_arn
-  alternate_domains   = [var.root_domain, var.www_domain]
-}
+# module "cloudfront" {
+#   source              = "../../modules/cloudfront"
+#   name                = "elton-static"
+#   bucket_domain       = module.s3.bucket_regional_domain_name
+#   zone_id             = aws_route53_zone.primary.zone_id
+#   root_domain         = var.root_domain
+#   acm_certificate_arn = module.acm_global.cert_arn
+#   alternate_domains   = [var.root_domain, var.www_domain]
+# }
 
 
 
-module "s3" {
-  source         = "../../modules/s3"
-  bucket_name    = "${var.name}-bucket"
-  cloudfront_arn = module.cloudfront.cloudfront_arn
-}
+# module "s3" {
+#   source         = "../../modules/s3"
+#   bucket_name    = "${var.name}-bucket"
+#   cloudfront_arn = module.cloudfront.cloudfront_arn
+# }
 
-module "api_gateway" {
-  source             = "../../modules/api-gateway"
-  name               = "${var.name}-api-gateway"
-  stage_name         = "$default"
-  alb_listener_uri   = module.alb.listener_arn
-  route_keys         = [
-    "GET /api/users/{userId}",
-    "GET /api/users/health_check",
-    "POST /api/products",
-    "GET /api/{proxy}/health_check",
-    "ANY /{proxy+}"
-  ]
+# module "api_gateway" {
+#   source             = "../../modules/api-gateway"
+#   name               = "${var.name}-api-gateway"
+#   stage_name         = "$default"
+#   alb_listener_uri   = module.alb.listener_arn
+#   route_keys         = [
+#     "GET /api/users/{userId}",
+#     "GET /api/users/health_check",
+#     "POST /api/products",
+#     "GET /api/{proxy}/health_check",
+#     "ANY /{proxy+}"
+#   ]
+#   subnet_ids          = [
+#     module.vpc.private_subnet_ids["app-A"],
+#     module.vpc.private_subnet_ids["app-C"]
+#   ]
+#   security_group_ids  = [module.sg.vpc_link_sg_id]
+#   zone_id             = aws_route53_zone.primary.zone_id
+#   custom_domain_name  = var.api_subdomain              
+#   certificate_arn     = module.acm_regional.cert_arn
+# }
+
+module "ecs" {
+  source = "../../modules/ecs"
+
+  name                = "user"
+  region              = var.region
+  ecr_repository_url  = var.container_images["user"]
+  image_tag           = "latest"
+  container_port      = 80
+  host_port           = 80
+  desired_count       = 1
   subnet_ids          = [
     module.vpc.private_subnet_ids["app-A"],
     module.vpc.private_subnet_ids["app-C"]
   ]
-  security_group_ids  = [module.sg.vpc_link_sg_id]
-  zone_id             = aws_route53_zone.primary.zone_id
-  custom_domain_name  = var.api_subdomain              
-  certificate_arn     = module.acm_regional.cert_arn
+  security_group_ids  = [module.sg.user_sg_id]
+  target_group_arn    = module.target_groups.target_group_arns["user"]
 }
